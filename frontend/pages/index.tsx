@@ -6,9 +6,20 @@ import Editor from "../components/editor";
 import styled from "styled-components";
 import {randomInt} from "../common/utils";
 
+const example = `from manim import *
+
+class MovingAround(Scene):
+    def construct(self):
+        square = Square(color=BLUE, fill_opacity=1)
+
+        self.play(square.animate.shift(LEFT))
+        self.play(square.animate.set_fill(ORANGE))
+        self.play(square.animate.scale(0.3))
+        self.play(square.animate.rotate(0.4))`;
+
 const Home: NextPage = () => {
     const [url, setUrl] = useState('');
-    const [code, setCode] = useState('');
+    const [code, setCode] = useState(example);
     const [log, setLog] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -26,7 +37,7 @@ const Home: NextPage = () => {
         })
             .then(res => res.json())
             .then(data => {
-                setUrl(`http://localhost:3000` + data.out + `?c=${randomInt(1000)}`);
+                setUrl(process.env.NEXT_PUBLIC_API_URL + data.out + `?c=${randomInt(1000)}`);
                 setLog(data.log);
             })
             .catch(error => alert("Error: " + error.message))
@@ -45,7 +56,9 @@ const Home: NextPage = () => {
                         <Editor code={code} onChange={setCode} />
                     </div>
                     <div>
-                        {loading ? 'Rendering ...' : <Preview url={url} />}
+                        {loading ? 'Rendering ...' : url ?<Preview url={url} /> : (
+                            <p>Press RENDER to show preview. Check <a href="https://docs.manim.community/en/stable/examples.html">manim.community/examples</a> for more examples.</p>
+                        )}
                     </div>
                 </IdeContainer>
                 <button onClick={render}>RENDER</button>
@@ -64,6 +77,7 @@ const IdeContainer = styled.div`
     height: 50vh;
     & > div {
         flex: 1;
+        margin: 5px;
     }
 `;
 
