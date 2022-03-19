@@ -1,17 +1,19 @@
 import type {NextPage} from 'next'
 import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
-import {createRef, useEffect, useState} from "react";
+import { useState} from "react";
+import Preview from "../components/preview";
+import Editor from "../components/editor";
+import styled from "styled-components";
+import {randomInt} from "../common/utils";
 
 const Home: NextPage = () => {
-    const videoRef = createRef<HTMLVideoElement>();
-    const [filePath, setFilePath] = useState('');
+    const [url, setUrl] = useState('');
     const [code, setCode] = useState('');
     const [log, setLog] = useState('');
-    const [counter, setCounter] = useState(0);
+    const [loading, setLoading] = useState(false);
 
     function render() {
+        setLoading(true);
         fetch('http://localhost:3000/render', {
             method: "POST",
             headers: {
@@ -24,39 +26,45 @@ const Home: NextPage = () => {
         })
             .then(res => res.json())
             .then(data => {
-                // append useless query to prevent video caching
-                setFilePath(`http://localhost:3000` + data.out + `?c=${counter}`);
+                setUrl(`http://localhost:3000` + data.out + `?c=${randomInt(1000)}`);
                 setLog(data.log);
-                setCounter(prev => prev + 1);
             })
             .catch(error => alert("Error: " + error.message))
+            .finally(() => setLoading(false))
     }
 
-    useEffect(() => {
-        videoRef?.current?.load();
-    }, [filePath])
-
     return (
-        <div className={styles.container}>
+        <Container>
             <Head>
                 <title>Manim Sandbox</title>
             </Head>
 
             <main>
-                <div className={styles.editor}>
-                    <div className={styles.left}>
-                        <textarea placeholder="Enter manim code..." onChange={e => setCode(e.target.value)}/>
+                <IdeContainer>
+                    <div>
+                        <Editor code={code} onChange={setCode} />
                     </div>
-                    <div className={styles.right}>
-                        <video ref={videoRef} controls autoPlay={true} loop={true} crossOrigin="cross-origin">
-                            <source src={filePath} type="video/mp4"/>
-                        </video>
+                    <div>
+                        {loading ? 'Rendering ...' : <Preview url={url} />}
                     </div>
-                </div>
+                </IdeContainer>
                 <button onClick={render}>RENDER</button>
             </main>
-        </div>
+        </Container>
     )
 }
+
+const Container = styled.div`
+    padding: 2em;
+`;
+
+const IdeContainer = styled.div`
+    display: flex;
+    flex-direction: row;
+    height: 50vh;
+    & > div {
+        flex: 1;
+    }
+`;
 
 export default Home

@@ -1,6 +1,6 @@
 # Manim Sandbox
 
-Manim (mathematical animation library) coding sandbox for fast & easy manim scene creation.
+[Manim](https://www.manim.community/) (mathematical animation library) coding sandbox for fast & easy manim scene creation.
 
 > ⚠️ This is just a prototype application.
 
