@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"log"
 	"os"
 	"os/exec"
@@ -21,6 +22,10 @@ const MediaPrefix = "/media"
 
 func main() {
 	app := fiber.New()
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+	}))
 
 	app.Static(MediaPrefix, ManimRoot)
 
