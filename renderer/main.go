@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"log"
@@ -10,15 +11,14 @@ import (
 )
 
 type ManimArgs struct {
-	Code string `json:"code"`
+	Code       string `json:"code"`
+	ProjectUid string `json:"projectUid"`
 }
 
 func main() {
-	execManim("init")
-
 	app := fiber.New()
 
-	app.Static("/media", "/manim/media")
+	app.Static("/media", ".")
 
 	app.Post("/render", func(c *fiber.Ctx) error {
 		args := new(ManimArgs)
@@ -26,40 +26,80 @@ func main() {
 		if err := c.BodyParser(args); err != nil {
 			return err
 		}
-		writeCode(args.Code)
-		out := execManim("render", "-o", "out", "main.py")
+		if !isProjectInit(args.ProjectUid) {
+			err := initProject(args.ProjectUid)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := writeCode(args.ProjectUid, args.Code)
+		if err != nil {
+			return nil
+		}
+
+		out, _ := execManim(args.ProjectUid, "render", "-o", "out", "main.py")
 		return c.SendString(out)
 	})
 
 	app.Listen(":3000")
 }
 
-func writeCode(value string) {
+func writeCode(projectUid string, value string) error {
 	// Read Write Mode
-	file, err := os.OpenFile("main.py", os.O_RDWR, 0644)
-
+	file, err := os.OpenFile(projectUid+"/main.py", os.O_RDWR, 0644)
 	if err != nil {
 		log.Fatalf("failed opening file: %s", err)
 	}
 	defer file.Close()
+	// replace contents of file
 	err = file.Truncate(0)
 	_, err = file.Seek(0, 0)
 	_, err = file.WriteAt([]byte(value), 0) // Write at 0 beginning
 	if err != nil {
 		log.Fatalf("failed writing to file: %s\n", err)
+		return err
 	}
+	return nil
 }
 
-func execManim(arg ...string) string {
+func isProjectInit(uid string) bool {
+	// check if project directory exists
+	if _, err := os.Stat(uid); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	// check if manim config inside project directory exists
+	if _, err := os.Stat(uid + "/manim.cfg"); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
+}
+
+func initProject(uid string) error {
+	err := os.Mkdir(uid, 0755)
+	if err != nil {
+		log.Fatalf("Failed to init project dir: %s", err)
+		return err
+	}
+	_, err = execManim(uid, "init")
+	if err != nil {
+		log.Fatalf("Failed to init manim: %s", err)
+		return err
+	}
+	return nil
+}
+
+func execManim(projectUid string, arg ...string) (string, error) {
 	fmt.Printf("Executing manim command: %s\n", arg)
 	cmd := exec.Command("manim", arg...)
+	cmd.Dir = projectUid // set working directory
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return stderr.String()
+		return stderr.String(), nil
 	}
-	return stdout.String()
+	return stdout.String(), err
 }
