@@ -55,7 +55,10 @@ func main() {
 		})
 	})
 
-	app.Listen(":3000")
+	err := app.Listen(":" + os.Getenv("PORT"))
+	if err != nil {
+		log.Fatalf("Error starting server: %s", err)
+	}
 }
 
 func writeCode(projectUid string, value string) error {

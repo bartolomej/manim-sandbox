@@ -14,7 +14,7 @@ const Home: NextPage = () => {
 
     function render() {
         setLoading(true);
-        fetch('http://localhost:3000/render', {
+        fetch(process.env.NEXT_PUBLIC_API_URL + '/render', {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json'
