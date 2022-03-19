@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 )
 
 type ManimArgs struct {
@@ -15,10 +16,13 @@ type ManimArgs struct {
 	ProjectUid string `json:"projectUid"`
 }
 
+const ManimRoot = "/manim"
+const MediaPrefix = "/media"
+
 func main() {
 	app := fiber.New()
 
-	app.Static("/media", ".")
+	app.Static(MediaPrefix, ManimRoot)
 
 	app.Post("/render", func(c *fiber.Ctx) error {
 		args := new(ManimArgs)
@@ -38,8 +42,12 @@ func main() {
 			return nil
 		}
 
-		out, _ := execManim(args.ProjectUid, "render", "-o", "out", "main.py")
-		return c.SendString(out)
+		stdout, _ := execManim(args.ProjectUid, "render", "-o", "out", "main.py")
+		outFile := GetOutFileDir(stdout)
+		return c.JSON(fiber.Map{
+			"out": outFile,
+			"log": stdout,
+		})
 	})
 
 	app.Listen(":3000")
@@ -102,4 +110,17 @@ func execManim(projectUid string, arg ...string) (string, error) {
 		return stderr.String(), nil
 	}
 	return stdout.String(), err
+}
+
+func GetOutFileDir(value string) string {
+	// remove line breaks and whitespace
+	r, _ := regexp.Compile("[ \n\t]")
+	trimmed := r.ReplaceAllString(value, "")
+	// find a string containing output file path
+	r, _ = regexp.Compile("Filereadyat'.+'")
+	line := r.FindString(trimmed)
+	// extract file path from matched string
+	r, _ = regexp.Compile("Filereadyat|'|" + ManimRoot)
+	// prefix with static folder dir
+	return MediaPrefix + r.ReplaceAllString(line, "")
 }
