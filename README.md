@@ -15,3 +15,5 @@ curl \
   --header 'Content-Type: application/json' \
   --request POST http://localhost:3000/render
 ```
+
+When deploying renderer service to Digital Ocean use [this config](./manim-sandbox.yaml).
